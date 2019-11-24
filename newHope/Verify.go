@@ -1,7 +1,7 @@
 package newHope
 
 import (
-	"github.com/ldsec/lattigo/ring"
+	"github.com/lca1/lattigo/newhope"
 	"go.dedis.ch/onet/v3/glyph"
 	"golang.org/x/xerrors"
 )
@@ -12,7 +12,7 @@ const InvalidSignature = "Invalid signature: Signature could not be verified wit
 
 const InvalidPrivateKey = "Invalid size of secret key"
 
-func checkPublicKey(pk []byte, ctx *ring.Context) (*glyph.PublicKey, error) {
+func checkPublicKey(pk []byte, ctx *newhope.Context) (*glyph.PublicKey, error) {
 	size := NewHopePublicKeySize
 	l := len(pk)
 	if size != l {
@@ -27,7 +27,7 @@ func checkPublicKey(pk []byte, ctx *ring.Context) (*glyph.PublicKey, error) {
 	return glyph.NewPublicKey(key), nil
 }
 
-func checkSignature(sig []byte, ctx *ring.Context) (*glyph.Signature, error) {
+func checkSignature(sig []byte, ctx *newhope.Context) (*glyph.Signature, error) {
 	size := NewHopeSignatureSize
 	l := len(sig)
 	if l != size {
@@ -54,7 +54,7 @@ func checkSignature(sig []byte, ctx *ring.Context) (*glyph.Signature, error) {
 	return glyph.NewSignature(z1, z2, c), nil
 }
 
-func checkPrivateKey(sk []byte, ctx *ring.Context) (*glyph.PrivateKey, error) {
+func checkPrivateKey(sk []byte, ctx *newhope.Context) (*glyph.PrivateKey, error) {
 	polySize := NewHopePolySize
 	l := len(sk)
 	if l != 2*polySize {

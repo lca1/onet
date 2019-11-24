@@ -1,13 +1,15 @@
 package glyph
 
-/*func BenchmarkEncodeSparsePolynomial(t *testing.B) {
+import "testing"
+
+func BenchmarkEncodeSparsePolynomial(t *testing.B) {
 	msg := []byte("deadbeef")
 	ctx := GetCtx()
 	sampler := ctx.NewTernarySampler()
 	p := ctx.NewPoly()
-	sampler.SampleUniform(p)
+	sampler.Sample(0.33, p)
 	for i := 0; i < t.N; i++ {
-		h := hash(p, msg, ctx.N)
+		h := hash(p, msg, ctx.N())
 		encodeSparsePolynomial(ctx, omega, h)
 	}
 }
@@ -73,4 +75,4 @@ func benchmarkGenerateKeyPair(n int, t *testing.B) {
 	}
 }
 
-func BenchmarkGenerateKeyPair1(t *testing.B) { benchmarkGenerateKeyPair(1, t) }*/
+func BenchmarkGenerateKeyPair1(t *testing.B) { benchmarkGenerateKeyPair(1, t) }
