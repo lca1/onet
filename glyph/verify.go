@@ -1,18 +1,21 @@
 package glyph
 
 func (pk *PublicKey) Verify(sig *Signature, msg []byte) bool {
-	ctx := pk.ctx
+	ctx := GetCtx()
 	z1 := ctx.NewPoly()
 	z2 := ctx.NewPoly()
-	z1.SetCoefficients(sig.z1.GetCoefficients())
-	z2.SetCoefficients(sig.z2.GetCoefficients())
-	a := ctx.NewPoly()
-	a.Copy(GetA(ctx))
+	//z1.Coeffs = sig.z1.Coeffs
+	//z2.Coeffs = sig.z2.Coeffs
+	copy(z1.Coeffs, sig.z1.Coeffs)
+	copy(z2.Coeffs, sig.z2.Coeffs)
+	a := GetA(ctx)
 	ctx.NTT(z1, z1)
 	ctx.NTT(z2, z2)
 	c := ctx.NewPoly()
-	c.Copy(sig.c)
+	copy(c.Coeffs, sig.c.Coeffs)
+	//c.Coeffs = sig.c.Coeffs
 	ctx.NTT(c, c)
+
 	az1z2 := ctx.NewPoly()
 	az1 := ctx.NewPoly()
 	ctx.MulCoeffs(a, z1, az1)
@@ -22,23 +25,23 @@ func (pk *PublicKey) Verify(sig *Signature, msg []byte) bool {
 	az1z2tc := ctx.NewPoly()
 	//this is a *s + e the public key
 	t := ctx.NewPoly()
-	t.SetCoefficients(pk.GetT().GetCoefficients())
+	//t.Coeffs = pk.GetT().Coeffs
+	copy(t.Coeffs, pk.GetT().Coeffs)
 	ctx.NTT(t, t)
 	tc := ctx.NewPoly()
 	ctx.MulCoeffs(t, c, tc)
 	ctx.Sub(az1z2, tc, az1z2tc)
 	ctx.InvNTT(az1z2tc, az1z2tc)
-	az1z2tc.SetCoefficients(kfloor(az1z2tc.GetCoefficients()))
-	dp := hash(az1z2tc, msg, ctx.N)
+	az1z2tc.Coeffs = kfloor(az1z2tc.Coeffs)
+	dp := hash(az1z2tc, msg, ctx.N())
 	d := encodeSparsePolynomial(ctx, omega, dp)
 	ctx.InvNTT(c, c)
-	for i, coeffs := range d.GetCoefficients() {
-		c2 := sig.c.GetCoefficients()[i]
-		for j, cof1 := range coeffs {
-			cof2 := c2[j]
-			if cof1 != cof2 {
-				return false
-			}
+	//fmt.Println(c.Coeffs)
+	//fmt.Println(d.Coeffs)
+	for j, coeff := range sig.c.Coeffs {
+		coeff2 := d.Coeffs[j]
+		if coeff != coeff2 {
+			return false
 		}
 	}
 	return true

@@ -4,7 +4,6 @@ func (pk *PublicKey) Marshall() ([]byte, error) {
 	t := pk.GetT()
 	return t.MarshalBinary()
 }
-
 func (pk *PrivateKey) Marshall() ([]byte, error) {
 	z1 := pk.GetS()
 	z2 := pk.GetE()

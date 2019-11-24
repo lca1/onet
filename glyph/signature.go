@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/AidosKuneen/numcpu"
-	"github.com/ldsec/lattigo/ring"
+	"github.com/lca1/lattigo/newhope"
 )
 
 /*
@@ -14,7 +14,7 @@ import (
 *
  */
 
-func NewSignature(z1, z2, c *ring.Poly) *Signature {
+func NewSignature(z1, z2, c *newhope.Poly) *Signature {
 	return &Signature{
 		z1: z1,
 		z2: z2,
@@ -29,7 +29,6 @@ func (pk *PrivateKey) Sign(m []byte) (*Signature, error) {
 	defer cancel()
 	for i := 0; i < numcpu.NumCPU(); i++ {
 		go func() {
-			modulus := ringCtx.Modulus
 			for {
 				select {
 				case <-ctx.Done():
@@ -37,48 +36,36 @@ func (pk *PrivateKey) Sign(m []byte) (*Signature, error) {
 				default:
 				}
 				y1, y2 := ringCtx.NewUniformPoly(), ringCtx.NewUniformPoly()
-				y1Temp := make([][]uint64, len(y1.GetCoefficients()))
-				for i, pol := range y1.GetCoefficients() {
-					Q := modulus[i]
-					l := len(pol)
-					temp := make([]uint64, l)
-					for j := 0; j < l; j++ {
-						v := pol[j]
-						for {
-							v &= ^(^0 << (bBits + 1))
-							if v <= 2*constB+1 {
-								break
-							}
+				y1Temp := make([]uint32, len(y1.Coeffs))
+				for j, v2 := range y1.Coeffs {
+					v := v2
+					for {
+						v &= ^(^0 << (bBits + 1))
+						if v <= 2*constB+1 {
+							break
 						}
-						if v > constB {
-							v = Q - (pol[j] - constB)
-						}
-						temp[j] = v
 					}
-					y1Temp[i] = temp
-				}
-				y1.SetCoefficients(y1Temp)
-				y2Temp := make([][]uint64, len(y2.GetCoefficients()))
-				for i, pol := range y2.GetCoefficients() {
-					Q := modulus[i]
-					l := len(pol)
-					temp := make([]uint64, l)
-					for j := 0; j < l; j++ {
-						v := pol[j]
-						for {
-							v &= ^(^0 << (bBits + 1))
-							if v <= 2*constB+1 {
-								break
-							}
-						}
-						if v > constB {
-							v = Q - (pol[j] - constB)
-						}
-						temp[j] = v
+					if v > constB {
+						v = constQ - (y1.Coeffs[j] - constB)
 					}
-					y2Temp[i] = temp
+					y1Temp[j] = v
 				}
-				y2.SetCoefficients(y2Temp)
+				y1.Coeffs = y1Temp
+				y2Temp := make([]uint32, len(y2.Coeffs))
+				for j, v2 := range y2.Coeffs {
+					v := v2
+					for {
+						v &= ^(^0 << (bBits + 1))
+						if v <= 2*constB+1 {
+							break
+						}
+					}
+					if v > constB {
+						v = constQ - (y2.Coeffs[j] - constB)
+					}
+					y2Temp[j] = v
+				}
+				y2.Coeffs = y2Temp
 				sig, err := pk.deterministicSign(y1, y2, m)
 				if err == nil {
 					notify <- sig
@@ -95,7 +82,7 @@ func (pk *PrivateKey) Sign(m []byte) (*Signature, error) {
 	}
 }
 
-func (pk *PrivateKey) deterministicSign(y1, y2 *ring.Poly, message []byte) (*Signature, error) {
+func (pk *PrivateKey) deterministicSign(y1, y2 *newhope.Poly, message []byte) (*Signature, error) {
 	ctx := GetCtx()
 	a := GetA(ctx)
 	y1fft := ctx.NewPoly()
@@ -110,48 +97,49 @@ func (pk *PrivateKey) deterministicSign(y1, y2 *ring.Poly, message []byte) (*Sig
 	ctx.InvNTT(t, t)
 	//done making t
 	//floored coefficients
-	ay1y2 := kfloor(t.GetCoefficients())
+	ay1y2 := kfloor(t.Coeffs)
 	rounded := ctx.NewPoly()
-	rounded.SetCoefficients(ay1y2)
-	h := hash(rounded, message, ctx.N)
+	//rounded.Coeffs = ay1y2
+	copy(rounded.Coeffs, ay1y2)
+	//fmt.Println(rounded.Coeffs)
+	h := hash(rounded, message, ctx.N())
 	c := encodeSparsePolynomial(ctx, omega, h)
 	ctx.NTT(c, c)
 	//making z1 = s*c + y1
 	sc := ctx.NewPoly()
 	s := ctx.NewPoly()
 	z1 := ctx.NewPoly()
-	s.Copy(pk.GetS())
+	//s.Copy(pk.GetS())
+	copy(s.Coeffs, pk.GetS().Coeffs)
+	//fmt.Println(s.Coeffs)
 	ctx.NTT(s, s)
 	ctx.MulCoeffs(s, c, sc)
 	ctx.Add(sc, y1fft, z1)
 	ctx.InvNTT(z1, z1)
 	//done
-	for i, pol := range z1.GetCoefficients() {
-		Q := ctx.Modulus[i]
-		for _, coeff := range pol {
-			if abs(coeff, Q) > (constB - omega) {
-				//fmt.Println("J: ", j, "ABS: ", (constB - omega))
-				return nil, errors.New("Rejected")
-			}
+	Q := constQ
+	for _, coeff := range z1.Coeffs {
+		if abs(coeff, Q) > (constB - omega) {
+			//fmt.Println("J: ", j, "ABS: ", (constB - omega))
+			return nil, errors.New("Rejected")
 		}
 	}
 	//making z2 = e*c + y2
 	ec := ctx.NewPoly()
 	e := ctx.NewPoly()
 	z2 := ctx.NewPoly()
-	e.Copy(pk.GetE())
+	//e.Copy(pk.GetE())
+	copy(e.Coeffs, pk.GetE().Coeffs)
+	//e.Copy(pk.GetE())
 	ctx.NTT(e, e)
 	ctx.MulCoeffs(e, c, ec)
 	ctx.Add(ec, y2fft, z2)
 	ctx.InvNTT(z2, z2)
-	for i, pol := range z2.GetCoefficients() {
-		Q := ctx.Modulus[i]
-		for _, coeff := range pol {
-			if abs(coeff, Q) > (constB - omega) {
-				return nil, errors.New("Rejected")
-			}
-
+	for _, coeff := range z2.Coeffs {
+		if abs(coeff, Q) > (constB - omega) {
+			return nil, errors.New("Rejected")
 		}
+
 	}
 
 	/*z2compressed := make([][]uint64, len(ctx.Modulus))
@@ -177,56 +165,46 @@ func (pk *PrivateKey) deterministicSign(y1, y2 *ring.Poly, message []byte) (*Sig
 	return sig, nil
 }
 
-func encodeSparsePolynomial(ctx *ring.Context, omega uint64, h [][32]byte) *ring.Poly {
-	l := len(h)
-	N := ctx.N
-	modulus := ctx.Modulus
-	newCoeffs := make([][]uint64, len(modulus))
-	usedIndexes := make([]uint64, 0)
-	for k := uint64(0); k < uint64(l); k++ {
-		Q := modulus[k]
-		m := h[k]
-		sparse := make([]uint64, N)
-		stream := hashToRand(k, m) //Create a stream for a specific hash of a message
-		r64 := nextRandUint64(stream)
-		bitsUsed := uint64(0)
-		for i := uint64(0); i < omega && i < N; i++ {
-			for {
-				if bitsUsed+nBits+1 > 64 {
-					r64 = nextRandUint64(stream)
-					bitsUsed = 0
+func encodeSparsePolynomial(ctx *newhope.Context, omega uint32, h [32]byte) *newhope.Poly {
+	N := ctx.N()
+	usedIndexes := make([]uint32, 0)
+	Q := constQ
+	sparse := make([]uint32, N)
+	stream := hashToRand(0, h) //Create a stream for a specific hash of a message
+	r64 := nextRandUint64(stream)
+	bitsUsed := uint32(0)
+	for i := uint32(0); i < omega && i < N; i++ {
+		for {
+			if bitsUsed+nBits+1 > 64 {
+				r64 = nextRandUint64(stream)
+				bitsUsed = 0
+			}
+			sign := r64 & 1
+			r64 >>= 1
+			bitsUsed++
+			pos := uint32(r64 & (^((^0) << nBits)))
+			r64 >>= nBits
+			bitsUsed += nBits
+			if pos < N {
+				success := true
+				for j := 0; j < len(usedIndexes); j++ {
+					if pos == usedIndexes[j] {
+						success = false
+					}
 				}
-				sign := r64 & 1
-				r64 >>= 1
-				bitsUsed++
-				pos := uint64(r64 & (^((^0) << nBits)))
-				r64 >>= nBits
-				bitsUsed += nBits
-				if pos < N {
-					success := true
-					for j := 0; j < len(usedIndexes); j++ {
-						if pos == usedIndexes[j] {
-							success = false
-						}
+				if success {
+					usedIndexes = append(usedIndexes, pos)
+					if sign == 1 {
+						sparse[pos] = 1
+					} else {
+						sparse[pos] = Q - 1
 					}
-					if success {
-						usedIndexes = append(usedIndexes, pos)
-						if sign == 1 {
-							sparse[pos] = 1
-						} else {
-							sparse[pos] = Q - 1
-						}
-						break
-					}
+					break
 				}
 			}
 		}
-		newCoeffs[k] = sparse
 	}
 	p := ctx.NewPoly()
-	e := p.SetCoefficients(newCoeffs)
-	if e != nil {
-		panic(e)
-	}
+	p.Coeffs = sparse
 	return p
 }
