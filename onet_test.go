@@ -1,6 +1,7 @@
 package onet
 
 import (
+	"fmt"
 	"testing"
 
 	"go.dedis.ch/onet/v3/ciphersuite"
@@ -14,6 +15,7 @@ var testRegistry = ciphersuite.NewRegistry()
 
 // To avoid setting up testing-verbosity in all tests
 func TestMain(m *testing.M) {
+	fmt.Println("Bjorn")
 	testRegistry.RegisterCipherSuite(testSuite)
 	log.MainTest(m)
 }
