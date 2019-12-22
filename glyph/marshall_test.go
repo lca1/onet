@@ -1,4 +1,4 @@
-package glyph_small
+package glyph
 
 import (
 	"testing"

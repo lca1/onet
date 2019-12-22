@@ -9,7 +9,7 @@ func BenchmarkEncodeSparsePolynomial(t *testing.B) {
 	p := ctx.NewPoly()
 	sampler.Sample(0.33, p)
 	for i := 0; i < t.N; i++ {
-		h := hash(p, msg, ctx.N)
+		h := hash(p, msg, ctx.N())
 		encodeSparsePolynomial(ctx, omega, h)
 	}
 }

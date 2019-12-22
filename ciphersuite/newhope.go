@@ -71,12 +71,11 @@ func (s *NewHopeCipherSuite) Name() string {
 }
 
 func (s *NewHopeCipherSuite) PublicKey(raw *RawPublicKey) (PublicKey, error) {
-	suite := s.suite
 	if raw.Name() != s.Name() {
 		return nil, xerrors.New(errNotNewHopeCipherSuite)
 	}
 
-	if len(raw.Data) != suite.SizeOfPublicKey() {
+	if len(raw.Data) != newHope.NewHopePublicKeySize {
 		return nil, xerrors.New(errInvalidBufferSize)
 	}
 
@@ -84,12 +83,11 @@ func (s *NewHopeCipherSuite) PublicKey(raw *RawPublicKey) (PublicKey, error) {
 }
 
 func (s *NewHopeCipherSuite) PrivateKey(raw *RawSecretKey) (SecretKey, error) {
-	suite := s.suite
 	if raw.Name() != s.Name() {
 		return nil, xerrors.New(errNotNewHopeCipherSuite)
 	}
 
-	if len(raw.Data) != suite.SizeOfPrivateKey() {
+	if len(raw.Data) != newHope.NewHopePrivateKeySize {
 		return nil, xerrors.New(errInvalidBufferSize)
 	}
 
@@ -97,12 +95,11 @@ func (s *NewHopeCipherSuite) PrivateKey(raw *RawSecretKey) (SecretKey, error) {
 }
 
 func (s *NewHopeCipherSuite) Signature(raw *RawSignature) (Signature, error) {
-	suite := s.suite
 	if raw.Name() != s.Name() {
 		return nil, xerrors.New(errNotNewHopeCipherSuite)
 	}
 
-	if len(raw.Data) != suite.SizeOfSignature() {
+	if len(raw.Data) != newHope.NewHopeSignatureSize {
 		return nil, xerrors.New(errInvalidBufferSize)
 	}
 
@@ -110,7 +107,6 @@ func (s *NewHopeCipherSuite) Signature(raw *RawSignature) (Signature, error) {
 }
 
 func (s *NewHopeCipherSuite) GenerateKeyPair(reader io.Reader) (PublicKey, SecretKey, error) {
-	suite := s.suite
 	pk, sk, err := suite.GenerateKey(reader)
 	if err != nil {
 		return nil, nil, err
@@ -212,95 +208,4 @@ func (s *NewHopeCipherSuite) unpackSignature(sig Signature) (*NewHopeSignature, 
 	}
 
 	return nil, xerrors.New("wrong type of signature")
-}
-
-//NewNewHopeCipherSuite Returns the default cipher suite
-func NewNewHopeCipherSuite() *NewHopeCipherSuite {
-	return &NewHopeCipherSuite{
-		suite: newHope.NewSignSuite(),
-	}
-}
-
-//NewNewHopeCipherSuiteSmall returns a newhpe cipher suite that
-//utilizes small coefficients
-func NewNewHopeCipherSuiteSmall() *NewHopeCipherSuite {
-	return &NewHopeCipherSuite{
-		suite: newHope.NewSignSuiteSmall(),
-	}
-}
-
-func (s *NewHopeCipherSuite) getSuite() newHope.NewHope {
-	return nil
-}
-
-type NewHopeSmaller struct {
-}
-
-func (nh *NewHopeSmaller) Sign(sk SecretKey, msg []byte) (Signature, error) {
-	suite := NewNewHopeCipherSuiteSmall()
-	return suite.Sign(sk, msg)
-}
-
-func (nh *NewHopeSmaller) Name() string {
-	return NewNewHopeCipherSuiteSmall().Name()
-}
-
-func (nh *NewHopeSmaller) Verify(pk PublicKey, signature Signature, msg []byte) error {
-	return NewNewHopeCipherSuiteSmall().Verify(pk, signature, msg)
-}
-
-func (nh *NewHopeSmaller) Signature(raw *RawSignature) (Signature, error) {
-	return NewNewHopeCipherSuiteSmall().Signature(raw)
-}
-
-func (nh *NewHopeSmaller) GenerateKeyPair(reader io.Reader) (PublicKey, SecretKey, error) {
-	return NewNewHopeCipherSuiteSmall().GenerateKeyPair(reader)
-}
-
-func (nh *NewHopeSmaller) SecretKey(raw *RawSecretKey) (SecretKey, error) {
-	return NewNewHopeCipherSuiteSmall().SecretKey(raw)
-}
-
-func (nh *NewHopeSmaller) PublicKey(raw *RawPublicKey) (PublicKey, error) {
-	return NewNewHopeCipherSuiteSmall().PublicKey(raw)
-}
-
-type NewHopeRing struct {
-}
-
-func (nh *NewHopeRing) Sign(sk SecretKey, msg []byte) (Signature, error) {
-	suite := NewNewHopeCipherSuite()
-	return suite.Sign(sk, msg)
-}
-
-func (nh *NewHopeRing) Name() string {
-	return NewNewHopeCipherSuite().Name()
-}
-
-func (nh *NewHopeRing) Verify(pk PublicKey, signature Signature, msg []byte) error {
-	return NewNewHopeCipherSuite().Verify(pk, signature, msg)
-}
-
-func (nh *NewHopeRing) Signature(raw *RawSignature) (Signature, error) {
-	return NewNewHopeCipherSuite().Signature(raw)
-}
-
-func (nh *NewHopeRing) GenerateKeyPair(reader io.Reader) (PublicKey, SecretKey, error) {
-	return NewNewHopeCipherSuite().GenerateKeyPair(reader)
-}
-
-func (nh *NewHopeRing) SecretKey(raw *RawSecretKey) (SecretKey, error) {
-	return NewNewHopeCipherSuite().SecretKey(raw)
-}
-
-func (nh *NewHopeRing) PublicKey(raw *RawPublicKey) (PublicKey, error) {
-	return NewNewHopeCipherSuite().PublicKey(raw)
-}
-
-func NewHope() *NewHopeRing {
-	return &NewHopeRing{}
-}
-
-func NewHopeSmall() *NewHopeSmaller {
-	return &NewHopeSmaller{}
 }

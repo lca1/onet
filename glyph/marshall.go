@@ -3,7 +3,7 @@ package glyph
 import (
 	"encoding/binary"
 
-	"github.com/ldsec/lattigo/ring"
+	"github.com/lca1/lattigo/newhope"
 	"golang.org/x/xerrors"
 )
 
@@ -11,7 +11,6 @@ func (pk *PublicKey) Marshall() ([]byte, error) {
 	t := pk.GetT()
 	return t.MarshalBinary()
 }
-
 func (pk *PrivateKey) Marshall() ([]byte, error) {
 	z1 := pk.GetS()
 	z2 := pk.GetE()
@@ -34,9 +33,9 @@ func (pk *PrivateKey) Marshall() ([]byte, error) {
 }
 
 func (sig *Signature) Marshall() ([]byte, error) {
+	ctx := GetCtx()
 	z1 := sig.z1
 	z2 := sig.z2
-	c := sig.c
 	d1, e1 := z1.MarshalBinary()
 	if e1 != nil {
 		return nil, e1
@@ -45,67 +44,52 @@ func (sig *Signature) Marshall() ([]byte, error) {
 	if e2 != nil {
 		return nil, e2
 	}
-	ctx := GetCtx()
-	d3 := make([]byte, uint64(len(ctx.Modulus))*2*omega)
-	for j, coeffs := range c.GetCoefficients() {
-		i := uint64(j)
-		copy(d3[i:i+2*omega], marshallSparsePolynomial(coeffs, uint16(ctx.N), uint16(omega)))
-	}
-	l1, l2, l3 := len(d1), len(d2), int(2*omega)
+	l1, l2, l3 := len(d1), len(d2), 2*int(omega)
 	data := make([]byte, l1+l2+l3)
 	copy(data[0:l1], d1)
 	copy(data[l1:l1+l2], d2)
-	copy(data[l1+l2:l1+l2+l3], d3)
+	copy(data[l1+l2:l1+l2+l3], marshallSparsePolynomial(sig.c.Coeffs, uint16(ctx.N()), uint16(omega)))
 	return data, nil
 }
 
-func UnmarshallSignature(data []byte) (*ring.Poly, error) {
+func UnmarshallSignature(data []byte) (*newhope.Poly, error) {
+	l := len(data)
+	if l != 2*int(omega) {
+		return nil, xerrors.New("Invalid data size")
+	}
 	ctx := GetCtx()
-	nbModules := uint64(len(ctx.Modulus))
-	w := omega
-	l := uint64(len(data))
-	if l%(2*w) != 0 || l/nbModules != (2*w) {
-		return nil, xerrors.New("data of invalid size")
+	coeffs, e := unmarshallSparsePolynomial(data, uint16(ctx.N()), uint16(omega), ctx.Modulus())
+	if e != nil {
+		return nil, e
 	}
-	coeffs := make([][]uint64, nbModules)
-	N := uint16(ctx.N)
-	for i := uint64(0); i < nbModules; i++ {
-		p, e := unmarshallSparsePolynomial(data[i:i+2*w], N, uint16(w), ctx.Modulus[i])
-		if e != nil {
-			return nil, e
-		}
-		coeffs[i] = p
+	e = checkIfSparse(coeffs, uint16(ctx.N()), uint16(omega), ctx.Modulus())
+	if e != nil {
+		return nil, e
 	}
-	c := ctx.NewPoly()
-	c.SetCoefficients(coeffs)
-	return c, nil
+	pol := ctx.NewPoly()
+	copy(pol.Coeffs, coeffs)
+	return pol, nil
 }
 
-func unmarshallSparsePolynomial(data []byte, N, w uint16, Q uint64) ([]uint64, error) {
-	l := uint16(len(data))
-	if l != 2*w {
-		return nil, xerrors.New("Incorrect size of marshalled signature")
-	}
-	var exists struct{}
-	used := make(map[uint16]struct{})
-	pol := make([]uint64, N)
-	for i := uint16(0); i < l; i += 2 {
-		c := binary.LittleEndian.Uint16(data[i : i+2])
-		pos := c % N
-		if _, ok := used[pos]; ok {
-			return nil, xerrors.New("Same position of coefficient used twice")
+func marshallSparsePolynomial(coeffs []uint32, N, w uint16) []byte {
+	data := make([]byte, 2*w)
+	index := uint32(0)
+	for i := uint16(0); i < N; i++ {
+		coeff := coeffs[i]
+		if coeff == 0 {
+			continue
 		}
-		if c >= N && c < 2*N {
-			pol[pos] = Q - 1
-		} else if c >= 0 && c < N {
-			pol[pos] = uint64(1)
+		if coeff == 1 {
+			binary.LittleEndian.PutUint16(data[index:index+2], i)
 		} else {
-			return nil, xerrors.New("Invalid byte sequence: Invalid index")
+			binary.LittleEndian.PutUint16(data[index:index+2], i+N)
 		}
-		used[pos] = exists
+		index += 2
+		if index == 2*uint32(w) {
+			break
+		}
 	}
-
-	return pol, nil
+	return data
 }
 
 func checkIfSparse(data []uint32, N, w uint16, Q uint32) error {
@@ -131,23 +115,29 @@ func checkIfSparse(data []uint32, N, w uint16, Q uint32) error {
 	return nil
 }
 
-func marshallSparsePolynomial(coeffs []uint64, N, w uint16) []byte {
-	data := make([]byte, 2*w)
-	index := uint32(0)
-	for i := uint16(0); i < N; i++ {
-		coeff := coeffs[i]
-		if coeff == 0 {
-			continue
-		}
-		if coeff == 1 {
-			binary.LittleEndian.PutUint16(data[index:index+2], i)
-		} else {
-			binary.LittleEndian.PutUint16(data[index:index+2], i+N)
-		}
-		index += 2
-		if index == 2*uint32(w) {
-			break
-		}
+func unmarshallSparsePolynomial(data []byte, N, w uint16, Q uint32) ([]uint32, error) {
+	l := uint16(len(data))
+	if l != 2*w {
+		return nil, xerrors.New("Incorrect size of marshalled signature")
 	}
-	return data
+	var exists struct{}
+	used := make(map[uint16]struct{})
+	pol := make([]uint32, N)
+	for i := uint16(0); i < l; i += 2 {
+		c := binary.LittleEndian.Uint16(data[i : i+2])
+		pos := c % N
+		if _, ok := used[pos]; ok {
+			return nil, xerrors.New("Same position of coefficient used twice")
+		}
+		if c >= N && c < 2*N {
+			pol[pos] = Q - 1
+		} else if c >= 0 && c < N {
+			pol[pos] = uint32(1)
+		} else {
+			return nil, xerrors.New("Invalid byte sequence: Invalid index")
+		}
+		used[pos] = exists
+	}
+
+	return pol, nil
 }

@@ -6,6 +6,16 @@ import (
 	"go.dedis.ch/onet/v3/glyph"
 )
 
+func compareCoeffs(coeffs1 []uint32, coeffs2 []uint32) bool {
+	for i, c1 := range coeffs1 {
+		c2 := coeffs2[i]
+		if c2 != c1 {
+			return false
+		}
+	}
+	return true
+}
+
 func TestPolyMarshall(t *testing.T) {
 	ctx := glyph.GetCtx()
 	p := ctx.NewUniformPoly()
@@ -18,7 +28,8 @@ func TestPolyMarshall(t *testing.T) {
 	if e2 != nil {
 		t.FailNow()
 	}
-	if !ctx.Equal(pk.GetT(), pub.GetT()) {
+	if !compareCoeffs(pk.GetT().Coeffs, pub.GetT().Coeffs) {
+		t.Log("Coeffs did not match")
 		t.FailNow()
 	}
 }
@@ -41,19 +52,19 @@ func TestSecretMarshall(t *testing.T) {
 	}
 	z12 := sk2.GetS()
 	z22 := sk2.GetE()
-	if !ctx.Equal(z1, z12) {
+	if !compareCoeffs(z1.Coeffs, z12.Coeffs) {
 		t.Log("Z1 did not equal")
 		t.Fail()
 	}
 
-	if !ctx.Equal(z2, z22) {
+	if !compareCoeffs(z2.Coeffs, z22.Coeffs) {
 		t.Log("Z2 did not equal")
 		t.Fail()
 	}
 
 	pk1 := sk.PK()
 	pk2 := sk2.PK()
-	if !ctx.Equal(pk1.GetT(), pk2.GetT()) {
+	if !compareCoeffs(pk1.GetT().Coeffs, pk2.GetT().Coeffs) {
 		t.Log("PK did not equal")
 		t.Fail()
 	}
@@ -96,7 +107,7 @@ func TestMarshall(t *testing.T) {
 		t.Log("Failed to generate public key")
 		t.FailNow()
 	}
-	if !ctx.Equal(testPublic.GetT(), publicKey.GetT()) {
+	if !compareCoeffs(testPublic.GetT().Coeffs, publicKey.GetT().Coeffs) {
 		t.Log("Unmarshalled public key is not equal to public key from the unmarshalled private key")
 		t.FailNow()
 	}
