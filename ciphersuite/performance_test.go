@@ -15,7 +15,7 @@ func benchmarkGenerateKey(suite CipherSuite, rand io.Reader, b *testing.B) {
 }
 
 func BenchmarkGenerateKeyNewHope(b *testing.B) {
-	suite := NewNewHopeCipherSuite()
+	suite := NewHope()
 	benchmarkGenerateKey(suite, nil, b)
 }
 
@@ -25,7 +25,7 @@ func BenchmarkGenerateKeyEd25519(b *testing.B) {
 }
 
 func BenchmarkGenerateKeyNewHopeSmall(b *testing.B) {
-	suite := NewNewHopeCipherSuiteSmall()
+	suite := NewHope()
 	benchmarkGenerateKey(suite, nil, b)
 }
 
@@ -55,7 +55,7 @@ func BenchmarkSignNewHope(b *testing.B) {
 }
 
 func BenchmarkSignNewHopeSmall(b *testing.B) {
-	suite := NewHopeSmall()
+	suite := NewHope()
 	msg := []byte("deadbeef")
 	benchmarkSign(suite, nil, msg, b)
 }
@@ -93,7 +93,7 @@ func BenchmarkVerifyNewHope(b *testing.B) {
 }
 
 func BenchmarkVerifyNewHopeSmall(b *testing.B) {
-	suite := NewHopeSmall()
+	suite := NewHope()
 	msg := []byte("deadbeef")
 	benchmarkVerify(suite, nil, msg, b)
 }

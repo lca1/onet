@@ -30,6 +30,10 @@ func (pk *NewHopePublicKey) Equal(other PublicKey) bool {
 	return pk.Raw().Equal(other.Raw())
 }
 
+func NewHope() *NewHopeCipherSuite {
+	return &NewHopeCipherSuite{}
+}
+
 type NewHopePrivateKey struct {
 	data newHope.PrivateKey
 }
@@ -63,7 +67,6 @@ func (pk *NewHopeSignature) Raw() *RawSignature {
 }
 
 type NewHopeCipherSuite struct {
-	suite newHope.NewHope
 }
 
 func (s *NewHopeCipherSuite) Name() string {
@@ -107,6 +110,7 @@ func (s *NewHopeCipherSuite) Signature(raw *RawSignature) (Signature, error) {
 }
 
 func (s *NewHopeCipherSuite) GenerateKeyPair(reader io.Reader) (PublicKey, SecretKey, error) {
+	suite := newHope.NewSignSuite()
 	pk, sk, err := suite.GenerateKey(reader)
 	if err != nil {
 		return nil, nil, err
@@ -115,7 +119,7 @@ func (s *NewHopeCipherSuite) GenerateKeyPair(reader io.Reader) (PublicKey, Secre
 }
 
 func (s *NewHopeCipherSuite) SecretKey(raw *RawSecretKey) (SecretKey, error) {
-	suite := s.suite
+	suite := newHope.NewSignSuite()
 	if raw.Name() != s.Name() {
 		return nil, xerrors.New(errNotNewHopeCipherSuite)
 	}
@@ -144,7 +148,7 @@ func (s *NewHopeCipherSuite) unpackSecretKey(sk SecretKey) (*NewHopePrivateKey, 
 }
 
 func (s *NewHopeCipherSuite) Sign(sk SecretKey, msg []byte) (Signature, error) {
-	suite := s.suite
+	suite := newHope.NewSignSuite()
 	secretKey, err := s.unpackSecretKey(sk)
 	if err != nil {
 		return nil, err
@@ -159,7 +163,7 @@ func (s *NewHopeCipherSuite) Sign(sk SecretKey, msg []byte) (Signature, error) {
 // Verify returns nil when the signature of the message can be verified by
 // the public key.
 func (s *NewHopeCipherSuite) Verify(pk PublicKey, sig Signature, msg []byte) error {
-	suite := s.suite
+	suite := newHope.NewSignSuite()
 	publicKey, err := s.unpackPublicKey(pk)
 	if err != nil {
 		return xerrors.Errorf("unpacking public key: %v", err)

@@ -12,7 +12,8 @@ import (
 var suite = NewHope()
 
 func TestNewHopePublicKey(t *testing.T) {
-	pk, _, e := newHope.GenerateKey(nil)
+	s := newHope.NewSignSuite()
+	pk, _, e := s.GenerateKey(nil)
 	require.NoError(t, e)
 	publicKey := &NewHopePublicKey{data: pk}
 
@@ -25,11 +26,12 @@ func TestNewHopePublicKey(t *testing.T) {
 }
 
 func TestNewHopePublicKey_Equal(t *testing.T) {
-	pk, _, e := newHope.GenerateKey(nil)
+	s := newHope.NewSignSuite()
+	pk, _, e := s.GenerateKey(nil)
 	require.NoError(t, e)
 	publicKey := &NewHopePublicKey{data: pk}
 
-	pk2, _, err := newHope.GenerateKey(nil)
+	pk2, _, err := s.GenerateKey(nil)
 	require.NoError(t, err)
 	publicKey2 := &NewHopePublicKey{data: pk2}
 
@@ -38,7 +40,8 @@ func TestNewHopePublicKey_Equal(t *testing.T) {
 }
 
 func TestNewHopeSignature(t *testing.T) {
-	_, sk, err := newHope.GenerateKey(nil)
+	s := newHope.NewSignSuite()
+	_, sk, err := s.GenerateKey(nil)
 	require.NoError(t, err)
 	sig, e := newHope.Sign(sk, []byte{})
 	require.Nil(t, e)
@@ -49,7 +52,8 @@ func TestNewHopeSignature(t *testing.T) {
 }
 
 func TestNewHopeSecretKey(t *testing.T) {
-	_, sk, err := newHope.GenerateKey(nil)
+	s := newHope.NewSignSuite()
+	_, sk, err := s.GenerateKey(nil)
 	require.NoError(t, err)
 
 	secretKey := &NewHopePrivateKey{data: sk}
@@ -86,7 +90,7 @@ type testSignatureNewHope struct {
 }
 
 func TestNewHopeCipherSuite_unpacking(t *testing.T) {
-	suite := NewNewHopeCipherSuite()
+	suite := NewHope()
 	rawPk := &RawPublicKey{CipherData: &CipherData{CipherName: "abc"}}
 	_, err := suite.PublicKey(rawPk)
 	require.Error(t, err)

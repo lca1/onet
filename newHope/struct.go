@@ -8,9 +8,9 @@ const omega = 16
 
 const NewHopeName = "New Hope"
 
-const sizeOfCoefficient = 8 //Assuming the coefficients are uint64 so 64 / 8
+const sizeOfCoefficient = 4 //Assuming the coefficients are uint64 so 64 / 8
 
-const NewHopePublicKeySize = 2 + numberOfModulie*numberOfCoefficients*sizeOfCoefficient
+const NewHopePublicKeySize = 1 + numberOfModulie*numberOfCoefficients*sizeOfCoefficient
 
 const numberOfModulie = 1
 
@@ -20,7 +20,7 @@ const NewHopePrivateKeySize = numberOfModulie * 2 * NewHopePolySize
 
 const NewHopeSignatureSize = numberOfModulie * (2*NewHopePolySize + int(2*omega))
 
-const NewHopePolySize = numberOfCoefficients*numberOfModulie*sizeOfCoefficient + 2
+const NewHopePolySize = numberOfCoefficients*numberOfModulie*sizeOfCoefficient + 1
 
 //PublicKey marshalled
 type PublicKey []byte
