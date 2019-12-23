@@ -54,12 +54,6 @@ func BenchmarkSignNewHope(b *testing.B) {
 	benchmarkSign(suite, nil, msg, b)
 }
 
-func BenchmarkSignNewHopeSmall(b *testing.B) {
-	suite := NewHope()
-	msg := []byte("deadbeef")
-	benchmarkSign(suite, nil, msg, b)
-}
-
 func benchmarkVerify(suite CipherSuite, rand io.Reader, msg []byte, b *testing.B) {
 	pk, sk, e := suite.GenerateKeyPair(rand)
 	if e != nil {
@@ -87,12 +81,6 @@ func BenchmarkVerifyEd25519(b *testing.B) {
 }
 
 func BenchmarkVerifyNewHope(b *testing.B) {
-	suite := NewHope()
-	msg := []byte("deadbeef")
-	benchmarkVerify(suite, nil, msg, b)
-}
-
-func BenchmarkVerifyNewHopeSmall(b *testing.B) {
 	suite := NewHope()
 	msg := []byte("deadbeef")
 	benchmarkVerify(suite, nil, msg, b)
