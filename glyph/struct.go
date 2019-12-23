@@ -11,6 +11,13 @@ type PrivateKey struct {
 	ctx *newhope.Context
 }
 
+type PrivateKeyParallel struct {
+	s   *newhope.Poly
+	e   *newhope.Poly
+	a   *newhope.Poly
+	ctx *newhope.Context
+}
+
 type Signature struct {
 	z1 *newhope.Poly
 	z2 *newhope.Poly

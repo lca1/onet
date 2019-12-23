@@ -1,8 +1,11 @@
 package glyph
 
 import (
+	"context"
 	"errors"
+	"time"
 
+	"github.com/AidosKuneen/numcpu"
 	"github.com/lca1/lattigo/newhope"
 )
 
@@ -159,4 +162,64 @@ func encodeSparsePolynomial(ctx *newhope.Context, omega uint32, h [32]byte) *new
 	p := ctx.NewPoly()
 	p.Coeffs = sparse
 	return p
+}
+
+func (pk *PrivateKey) SignParallel(m []byte) (*Signature, error) {
+	notify := make(chan *Signature, numcpu.NumCPU())
+	ringCtx := GetCtx()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	for i := 0; i < numcpu.NumCPU(); i++ {
+		go func() {
+			for {
+				select {
+				case <-ctx.Done():
+					return
+				default:
+				}
+				y1, y2 := ringCtx.NewUniformPoly(), ringCtx.NewUniformPoly()
+				y1Temp := make([]uint32, len(y1.Coeffs))
+				for j, v2 := range y1.Coeffs {
+					v := v2
+					for {
+						v &= ^(^0 << (bBits + 1))
+						if v <= 2*constB+1 {
+							break
+						}
+					}
+					if v > constB {
+						v = constQ - (y1.Coeffs[j] - constB)
+					}
+					y1Temp[j] = v
+				}
+				y1.Coeffs = y1Temp
+				y2Temp := make([]uint32, len(y2.Coeffs))
+				for j, v2 := range y2.Coeffs {
+					v := v2
+					for {
+						v &= ^(^0 << (bBits + 1))
+						if v <= 2*constB+1 {
+							break
+						}
+					}
+					if v > constB {
+						v = constQ - (y2.Coeffs[j] - constB)
+					}
+					y2Temp[j] = v
+				}
+				y2.Coeffs = y2Temp
+				sig, err := pk.deterministicSign(y1, y2, m)
+				if err == nil {
+					notify <- sig
+					return
+				}
+			}
+		}()
+	}
+	select {
+	case r := <-notify:
+		return r, nil
+	case <-time.After(15 * time.Minute):
+		return nil, errors.New("timeout while signing")
+	}
 }
