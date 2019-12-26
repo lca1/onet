@@ -1,27 +1,10 @@
 package glyph
 
 const (
-	PKSize  = qBits * constN / 8                  //512 bytes
-	SKSize  = 2 * 2 * constN / 8                  //1792 bytes
-	SigSize = ((bBits+1+2)*constN + 11*omega) / 8 //1942 bytes
-)
-
-const (
-	glpDigestLength = uint64(32)
-
 	constN = uint64(1024)
 	nBits  = uint64(10)
 	omega  = uint64(16)
 
-	//sk:512 bytes,pk:2048 bytes, sig:2198bytes
-	//4246 bytes
-	// constQ = 59393
-	// constB = 16383
-	// bBits  = 14
-	// qBits  = 16
-
-	//sk:512 bytes,pk:1792 bytes, sig:1942 bytes
-	//3737 bytes
 	constQ = uint64(12289)
 	constB = uint64(4095)
 	bBits  = uint64(12)
