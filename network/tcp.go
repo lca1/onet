@@ -26,9 +26,9 @@ var dialTimeout = 1 * time.Minute
 var timeoutLock = sync.RWMutex{}
 
 // MaxPacketSize limits the amount of memory that is allocated before a packet
-// is checked and thrown away if it's not legit. If you need more than 10MB
+// is checked and thrown away if it's not legit. If you need more than 100MB
 // packets, increase this value.
-var MaxPacketSize = Size(10 * 1024 * 1024)
+var MaxPacketSize = Size(100 * 1024 * 1024)
 
 // NewTCPAddress returns a new Address that has type PlainTCP with the given
 // address addr.
